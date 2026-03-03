@@ -3,7 +3,7 @@ session_start();
 require_once '../config.php';
 require_admin(); // Auth guard applied
 
-// Fetch Platforms from the database
+// 1. Fetch Digital Platforms
 $stmt_platforms = $pdo->query("SELECT * FROM platforms ORDER BY created_at DESC");
 $platforms = $stmt_platforms->fetchAll(PDO::FETCH_ASSOC);
 
@@ -12,16 +12,36 @@ foreach($platforms as $p) {
     if($p['status'] === 'Live') $live_platforms++;
 }
 
-// Fetch Blog Posts from the database
-$stmt_posts = $pdo->query("SELECT * FROM blog_posts ORDER BY publish_date DESC");
-$blog_posts = $stmt_posts->fetchAll(PDO::FETCH_ASSOC);
+// 2. Fetch Blog Posts (Using config.php function)
+$blog_posts = function_exists('getAllPosts') ? getAllPosts($pdo) : [];
 $total_posts = count($blog_posts);
 
-// Fetch Analytics (using your existing config.php function)
-$analytics = function_exists('getBlogAnalytics') ? getBlogAnalytics($pdo) : [];
-$total_readers = $analytics['total_views'] ?? 0;
-$today_readers = $analytics['today_views'] ?? 0;
-$monthly_readers = $analytics['monthly_views'] ?? 0;
+// 3. Process Analytics (Using config.php function)
+$analytics = function_exists('getBlogAnalytics') ? getBlogAnalytics($pdo) : ['daily'=>[], 'monthly'=>[]];
+
+$today = date('Y-m-d');
+$this_month = date('Y-m');
+
+$today_readers = 0;
+foreach($analytics['daily'] as $row) {
+    if($row['view_date'] === $today) {
+        $today_readers = $row['readers'];
+        break;
+    }
+}
+
+$monthly_readers = 0;
+foreach($analytics['monthly'] as $row) {
+    if($row['month_str'] === $this_month) {
+        $monthly_readers = $row['readers'];
+        break;
+    }
+}
+
+// getBlogAnalytics doesn't return an all-time total, so we query it directly
+$total_readers_stmt = $pdo->query("SELECT COUNT(DISTINCT ip_address) FROM blog_views");
+$total_readers = $total_readers_stmt->fetchColumn() ?: 0;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -212,7 +232,7 @@ $monthly_readers = $analytics['monthly_views'] ?? 0;
                                 <td class="px-6 py-4"><span class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold"><?= htmlspecialchars($post['category_name']) ?></span></td>
                                 <td class="px-6 py-4 text-gray-400"><?= htmlspecialchars(date('Y-m-d', strtotime($post['publish_date']))) ?></td>
                                 <td class="px-6 py-4">
-                                    <?php if($post['status'] === 'Active'): ?>
+                                    <?php if($post['is_active'] == 1): ?>
                                         <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span>
                                     <?php else: ?>
                                         <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Inactive</span>
@@ -374,7 +394,7 @@ $monthly_readers = $analytics['monthly_views'] ?? 0;
             </div>
 
             <div id="panel-analytics" class="panel">
-                <div class="mb-6"><h2 class="text-xl font-bold text-brand-blue heading">Analytics Overview</h2><p class="text-sm text-gray-400 mt-1">Reader insights pulled from the database.</p></div>
+                <div class="mb-6"><h2 class="text-xl font-bold text-brand-blue heading">Analytics Overview</h2><p class="text-sm text-gray-400 mt-1">Reader insights pulled directly from blog_views table.</p></div>
                 
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden max-w-2xl">
                     <table class="w-full text-sm text-left">
@@ -393,7 +413,7 @@ $monthly_readers = $analytics['monthly_views'] ?? 0;
                             </tr>
                             <tr>
                                 <td class="px-6 py-4 font-medium text-brand-blue flex items-center gap-3">
-                                    <div class="w-2 h-2 rounded-full bg-brand-yellow"></div> Monthly Views
+                                    <div class="w-2 h-2 rounded-full bg-brand-yellow"></div> Monthly Views (This Month)
                                 </td>
                                 <td class="px-6 py-4 font-bold heading text-lg"><?= number_format($monthly_readers) ?></td>
                             </tr>
