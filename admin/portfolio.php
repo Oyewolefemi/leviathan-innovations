@@ -1,16 +1,16 @@
 <?php
-require_once 'config.php'; // Connect to your database
+require_once '../config.php'; // Corrected path to config.php
 
 // Fetch platforms from the database
 $stmt = $pdo->query("SELECT * FROM platforms ORDER BY created_at DESC");
 $platforms = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Page-specific variables for the header
-$root_path = '';
+$root_path = '../'; // Corrected root path so header links (like ../index.php) work perfectly
 $page_title = 'Digital Platforms';
 $page_description = 'Explore the portfolio of systems and digital platforms powered by Leviathan Innovations.';
 
-include 'templates/header.php';
+include '../templates/header.php'; // Corrected path to header
 ?>
 
     <main class="py-section-py bg-light-bg min-h-screen relative">
@@ -25,7 +25,7 @@ include 'templates/header.php';
                 <div class="bg-white p-8 rounded-2xl shadow-lg border-t-4 <?= $platform['status'] === 'Live' ? 'border-brand-cyan' : 'border-brand-yellow' ?> flex flex-col h-full relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
                     <div class="flex items-center gap-4 mb-4">
                         <div class="w-16 h-16 bg-gray-50 rounded-xl border border-gray-100 flex-shrink-0 p-1">
-                            <img src="<?= htmlspecialchars($platform['logo_path']) ?>" alt="<?= htmlspecialchars($platform['name']) ?> Logo" class="w-full h-full object-contain rounded-lg">
+                            <img src="../<?= htmlspecialchars($platform['logo_path']) ?>" alt="<?= htmlspecialchars($platform['name']) ?> Logo" class="w-full h-full object-contain rounded-lg">
                         </div>
                         <div>
                             <h3 class="font-bold text-xl text-text-main leading-tight"><?= htmlspecialchars($platform['name']) ?></h3>
@@ -40,7 +40,7 @@ include 'templates/header.php';
                     <button 
                         onclick="openPlatformModal(
                             '<?= htmlspecialchars(addslashes($platform['name'])) ?>', 
-                            '<?= htmlspecialchars(addslashes($platform['logo_path'])) ?>', 
+                            '../<?= htmlspecialchars(addslashes($platform['logo_path'])) ?>', 
                             '<?= htmlspecialchars(addslashes($platform['description'])) ?>', 
                             '<?= htmlspecialchars(addslashes($platform['url'])) ?>',
                             '<?= htmlspecialchars(addslashes($platform['status'])) ?>'
@@ -131,5 +131,5 @@ include 'templates/header.php';
     </script>
 
 <?php
-include 'templates/footer.php';
+include '../templates/footer.php'; // Corrected path to footer
 ?>

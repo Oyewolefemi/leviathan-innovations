@@ -1,16 +1,27 @@
 <?php
 session_start();
 require_once '../config.php';
+require_admin(); // Auth guard applied
 
 // Fetch Platforms from the database
-$stmt = $pdo->query("SELECT * FROM platforms ORDER BY created_at DESC");
-$platforms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt_platforms = $pdo->query("SELECT * FROM platforms ORDER BY created_at DESC");
+$platforms = $stmt_platforms->fetchAll(PDO::FETCH_ASSOC);
 
-// Count total live platforms for the dashboard stat
 $live_platforms = 0;
 foreach($platforms as $p) {
     if($p['status'] === 'Live') $live_platforms++;
 }
+
+// Fetch Blog Posts from the database
+$stmt_posts = $pdo->query("SELECT * FROM blog_posts ORDER BY publish_date DESC");
+$blog_posts = $stmt_posts->fetchAll(PDO::FETCH_ASSOC);
+$total_posts = count($blog_posts);
+
+// Fetch Analytics (using your existing config.php function)
+$analytics = function_exists('getBlogAnalytics') ? getBlogAnalytics($pdo) : [];
+$total_readers = $analytics['total_views'] ?? 0;
+$today_readers = $analytics['today_views'] ?? 0;
+$monthly_readers = $analytics['monthly_views'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,16 +130,23 @@ foreach($platforms as $p) {
         <main class="flex-1 p-8">
 
             <div id="panel-dashboard" class="panel active">
+                <?php if(isset($_GET['success'])): ?>
+                    <div class="bg-emerald-50 text-emerald-600 p-4 rounded-xl mb-6 text-sm font-medium border border-emerald-100 flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Action completed successfully!
+                    </div>
+                <?php endif; ?>
+                
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
                     <div class="stat-card-blue text-white p-5 rounded-2xl shadow-lg">
                         <p class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3">Total Posts</p>
-                        <p class="text-4xl font-bold heading">12</p>
-                        <p class="text-white/50 text-xs mt-2">↑ 2 this month</p>
+                        <p class="text-4xl font-bold heading"><?= $total_posts ?></p>
+                        <p class="text-white/50 text-xs mt-2">Active database rows</p>
                     </div>
                     <div class="stat-card-cyan text-white p-5 rounded-2xl shadow-lg">
                         <p class="text-white/80 text-xs uppercase tracking-widest font-semibold mb-3">Today's Readers</p>
-                        <p class="text-4xl font-bold heading">47</p>
-                        <p class="text-white/70 text-xs mt-2">↑ 12% vs yesterday</p>
+                        <p class="text-4xl font-bold heading"><?= number_format($today_readers) ?></p>
+                        <p class="text-white/70 text-xs mt-2">Unique views today</p>
                     </div>
                     <div class="stat-card-yellow text-white p-5 rounded-2xl shadow-lg">
                         <p class="text-white/80 text-xs uppercase tracking-widest font-semibold mb-3">Live Platforms</p>
@@ -137,24 +155,19 @@ foreach($platforms as $p) {
                     </div>
                     <div class="stat-card-green text-white p-5 rounded-2xl shadow-lg">
                         <p class="text-white/80 text-xs uppercase tracking-widest font-semibold mb-3">Monthly Readers</p>
-                        <p class="text-4xl font-bold heading">1.2k</p>
-                        <p class="text-white/70 text-xs mt-2">↑ 8% vs last month</p>
+                        <p class="text-4xl font-bold heading"><?= number_format($monthly_readers) ?></p>
+                        <p class="text-white/70 text-xs mt-2">Total views this month</p>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         <div class="flex items-center justify-between mb-6">
-                            <h3 class="font-bold text-brand-blue heading">Readers — Last 7 Days</h3>
-                            <span class="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-3 py-1 rounded-full">Unique IPs</span>
+                            <h3 class="font-bold text-brand-blue heading">Total Cumulative Readers</h3>
+                            <span class="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-3 py-1 rounded-full">All Time</span>
                         </div>
-                        <div class="flex items-end gap-3 h-40">
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/20 rounded-t-lg" style="height:45%"></div><span class="text-xs text-gray-400">Mon</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/30 rounded-t-lg" style="height:60%"></div><span class="text-xs text-gray-400">Tue</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/50 rounded-t-lg" style="height:80%"></div><span class="text-xs text-gray-400">Wed</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/40 rounded-t-lg" style="height:55%"></div><span class="text-xs text-gray-400">Thu</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/70 rounded-t-lg" style="height:90%"></div><span class="text-xs text-gray-400">Fri</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan/30 rounded-t-lg" style="height:40%"></div><span class="text-xs text-gray-400">Sat</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><div class="w-full bg-brand-cyan rounded-t-lg" style="height:100%"></div><span class="text-xs text-gray-400">Sun</span></div>
+                        <div class="flex items-center justify-center h-40 flex-col">
+                            <p class="text-6xl font-bold text-brand-blue heading"><?= number_format($total_readers) ?></p>
+                            <p class="text-sm text-gray-500 mt-2">Unique article interactions</p>
                         </div>
                     </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -172,25 +185,6 @@ foreach($platforms as $p) {
                         </div>
                     </div>
                 </div>
-                <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 class="font-bold text-brand-blue heading">Recent Posts</h3>
-                        <button onclick="switchPanel('blog',document.querySelectorAll('.nav-link')[1])" class="text-xs text-brand-cyan font-semibold hover:underline">View all →</button>
-                    </div>
-                    <table class="w-full text-sm">
-                        <thead class="bg-light-bg"><tr>
-                            <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Headline</th>
-                            <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Category</th>
-                            <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
-                            <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                        </tr></thead>
-                        <tbody class="divide-y divide-gray-50">
-                            <tr><td class="px-6 py-4 font-medium text-brand-blue">Nano-Business Cycles in 2025</td><td class="px-6 py-4 text-gray-500">Strategy</td><td class="px-6 py-4 text-gray-400">2025-08-14</td><td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span></td></tr>
-                            <tr><td class="px-6 py-4 font-medium text-brand-blue">Feed Inflation & the Poultry Problem</td><td class="px-6 py-4 text-gray-500">Agro</td><td class="px-6 py-4 text-gray-400">2025-07-02</td><td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span></td></tr>
-                            <tr><td class="px-6 py-4 font-medium text-gray-400">Zero-to-Five: Hospitality Turnaround</td><td class="px-6 py-4 text-gray-500">Hospitality</td><td class="px-6 py-4 text-gray-400">2025-06-15</td><td class="px-6 py-4"><span class="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Inactive</span></td></tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
 
             <div id="panel-blog" class="panel">
@@ -199,11 +193,6 @@ foreach($platforms as $p) {
                     <button onclick="toggleModal('modal-new-post')" class="bg-brand-blue text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-opacity-90 transition-all shadow-md flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>New Post
                     </button>
-                </div>
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 flex flex-wrap items-center gap-3">
-                    <input type="text" placeholder="Search posts…" class="flex-1 min-w-48 text-sm border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40">
-                    <select class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40 text-gray-600"><option>All Categories</option><option>Strategy</option><option>Agro</option><option>Hospitality</option><option>Digital</option></select>
-                    <select class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40 text-gray-600"><option>All Status</option><option>Active</option><option>Inactive</option></select>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <table class="w-full text-sm">
@@ -216,30 +205,28 @@ foreach($platforms as $p) {
                             <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                         </tr></thead>
                         <tbody class="divide-y divide-gray-50">
+                            <?php foreach($blog_posts as $post): ?>
                             <tr>
-                                <td class="px-6 py-4 font-medium text-brand-blue max-w-xs truncate">Nano-Business Cycles in 2025</td>
-                                <td class="px-6 py-4 text-gray-500">Leviathan</td>
-                                <td class="px-6 py-4"><span class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold">Strategy</span></td>
-                                <td class="px-6 py-4 text-gray-400">2025-08-14</td>
-                                <td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span></td>
+                                <td class="px-6 py-4 font-medium text-brand-blue max-w-xs truncate"><?= htmlspecialchars($post['headline']) ?></td>
+                                <td class="px-6 py-4 text-gray-500"><?= htmlspecialchars($post['author_name'] ?? 'Leviathan') ?></td>
+                                <td class="px-6 py-4"><span class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold"><?= htmlspecialchars($post['category_name']) ?></span></td>
+                                <td class="px-6 py-4 text-gray-400"><?= htmlspecialchars(date('Y-m-d', strtotime($post['publish_date']))) ?></td>
+                                <td class="px-6 py-4">
+                                    <?php if($post['status'] === 'Active'): ?>
+                                        <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span>
+                                    <?php else: ?>
+                                        <span class="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">Inactive</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-6 py-4"><div class="flex items-center gap-2">
-                                    <button class="text-gray-400 hover:text-brand-blue transition-colors p-1.5 rounded-lg hover:bg-light-bg" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-                                    <button class="text-gray-400 hover:text-brand-yellow transition-colors p-1.5 rounded-lg hover:bg-light-bg" title="Toggle"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg></button>
-                                    <button class="text-gray-400 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                    <button class="text-gray-400 hover:text-brand-yellow transition-colors p-1.5 rounded-lg hover:bg-light-bg" title="Toggle Status"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg></button>
                                 </div></td>
                             </tr>
-                            <tr>
-                                <td class="px-6 py-4 font-medium text-brand-blue max-w-xs truncate">Feed Inflation & the Poultry Problem</td>
-                                <td class="px-6 py-4 text-gray-500">Leviathan</td>
-                                <td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-semibold">Agro</span></td>
-                                <td class="px-6 py-4 text-gray-400">2025-07-02</td>
-                                <td class="px-6 py-4"><span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">Active</span></td>
-                                <td class="px-6 py-4"><div class="flex items-center gap-2">
-                                    <button class="text-gray-400 hover:text-brand-blue transition-colors p-1.5 rounded-lg hover:bg-light-bg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-                                    <button class="text-gray-400 hover:text-brand-yellow transition-colors p-1.5 rounded-lg hover:bg-light-bg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg></button>
-                                    <button class="text-gray-400 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                                </div></td>
-                            </tr>
+                            <?php endforeach; ?>
+                            
+                            <?php if(empty($blog_posts)): ?>
+                                <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No blog posts found in the database.</td></tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -290,7 +277,6 @@ foreach($platforms as $p) {
                                 <div>
                                     <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1.5">Accent Characters</label>
                                     <input id="wm-accent" type="text" value="." placeholder="e.g. . or Lab" class="w-full text-sm border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40">
-                                    <p class="text-xs text-gray-400 mt-1">These characters get the accent color.</p>
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1.5">Tagline <span class="font-normal text-gray-300">(optional)</span></label>
@@ -312,17 +298,6 @@ foreach($platforms as $p) {
                                 <div class="flex items-center justify-between">
                                     <label class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Background</label>
                                     <div class="flex items-center gap-2"><input id="wm-bg-color" type="color" value="#ffffff" class="w-8 h-8 rounded-lg border border-gray-200 cursor-pointer"><span id="wm-bg-hex" class="text-xs font-mono text-gray-500">#ffffff</span></div>
-                                </div>
-                                <div class="pt-2 border-t border-gray-50">
-                                    <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-2">Presets</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        <button onclick="applyPalette('#0A2540','#00D4FF','#ffffff')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded" style="background:#0A2540"></div><div class="w-4 h-4 rounded" style="background:#00D4FF"></div></button>
-                                        <button onclick="applyPalette('#1a1a2e','#FFC82F','#ffffff')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded" style="background:#1a1a2e"></div><div class="w-4 h-4 rounded" style="background:#FFC82F"></div></button>
-                                        <button onclick="applyPalette('#065f46','#10b981','#ffffff')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded" style="background:#065f46"></div><div class="w-4 h-4 rounded" style="background:#10b981"></div></button>
-                                        <button onclick="applyPalette('#1e1b4b','#818cf8','#ffffff')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded" style="background:#1e1b4b"></div><div class="w-4 h-4 rounded" style="background:#818cf8"></div></button>
-                                        <button onclick="applyPalette('#7f1d1d','#f87171','#ffffff')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded" style="background:#7f1d1d"></div><div class="w-4 h-4 rounded" style="background:#f87171"></div></button>
-                                        <button onclick="applyPalette('#ffffff','#0A2540','#0A2540')" class="flex gap-1 p-1 rounded-lg border border-gray-200 hover:border-brand-cyan transition-colors"><div class="w-4 h-4 rounded border border-gray-200" style="background:#ffffff"></div><div class="w-4 h-4 rounded" style="background:#0A2540"></div></button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -347,7 +322,6 @@ foreach($platforms as $p) {
                                 <div>
                                     <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1.5">Letter Spacing</label>
                                     <input id="wm-spacing" type="range" min="-2" max="10" value="0" step="0.5" class="w-full accent-brand-cyan">
-                                    <div class="flex justify-between text-xs text-gray-400 mt-1"><span>Tight</span><span>Wide</span></div>
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1.5">Font Size</label>
@@ -393,66 +367,44 @@ foreach($platforms as $p) {
                                 <button onclick="downloadPNG(1)" class="flex items-center gap-2 bg-brand-cyan text-brand-blue px-5 py-2.5 rounded-full text-sm font-bold hover:bg-opacity-80 transition-all shadow-md">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>PNG @1x
                                 </button>
-                                <button onclick="downloadPNG(2)" class="flex items-center gap-2 bg-light-bg text-brand-blue border border-gray-200 px-5 py-2.5 rounded-full text-sm font-bold hover:border-brand-blue transition-all">PNG @2x</button>
                             </div>
-                            <p class="text-xs text-gray-400 mt-3">SVG is vector — infinitely scalable. PNG exports at 800×300 (or 1600×600 @2x).</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="panel-analytics" class="panel">
-                <div class="mb-6"><h2 class="text-xl font-bold text-brand-blue heading">Analytics</h2><p class="text-sm text-gray-400 mt-1">Unique reader counts from the blog_views table.</p></div>
-                <div class="flex gap-2 mb-6">
-                    <button onclick="setAnalyticsTab('daily')" id="tab-daily" class="px-4 py-2 rounded-full text-sm font-bold bg-brand-blue text-white shadow-md">Daily</button>
-                    <button onclick="setAnalyticsTab('weekly')" id="tab-weekly" class="px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-gray-200">Weekly</button>
-                    <button onclick="setAnalyticsTab('monthly')" id="tab-monthly" class="px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-gray-200">Monthly</button>
-                </div>
-                <div id="analytics-daily" class="analytics-tab">
-                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5">
-                        <h3 class="font-bold text-brand-blue heading mb-6">Daily Unique Readers — Last 7 Days</h3>
-                        <div class="flex items-end gap-4 h-52">
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">23</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:46%"></div><span class="text-xs text-gray-400">Feb 25</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">31</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:62%"></div><span class="text-xs text-gray-400">Feb 26</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">18</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:36%"></div><span class="text-xs text-gray-400">Feb 27</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">44</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:88%"></div><span class="text-xs text-gray-400">Feb 28</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">50</span><div class="w-full bg-gradient-to-t from-brand-cyan to-brand-cyan/50 rounded-t-lg shadow-md" style="height:100%"></div><span class="text-xs text-gray-400">Mar 01</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">38</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:76%"></div><span class="text-xs text-gray-400">Mar 02</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">47</span><div class="w-full bg-gradient-to-t from-brand-cyan/80 to-brand-cyan/30 rounded-t-lg" style="height:94%"></div><span class="text-xs text-gray-400">Today</span></div>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        <table class="w-full text-sm"><thead class="bg-light-bg"><tr><th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th><th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Unique Readers</th><th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Note</th></tr></thead>
+                <div class="mb-6"><h2 class="text-xl font-bold text-brand-blue heading">Analytics Overview</h2><p class="text-sm text-gray-400 mt-1">Reader insights pulled from the database.</p></div>
+                
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden max-w-2xl">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-light-bg">
+                            <tr>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Metric</th>
+                                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Count</th>
+                            </tr>
+                        </thead>
                         <tbody class="divide-y divide-gray-50">
-                            <tr><td class="px-6 py-3 text-gray-600">2026-03-03</td><td class="px-6 py-3 font-bold text-brand-blue">47</td><td class="px-6 py-3 text-emerald-500 text-xs font-semibold">↑ Today</td></tr>
-                            <tr><td class="px-6 py-3 text-gray-600">2026-03-02</td><td class="px-6 py-3 font-bold text-brand-blue">38</td><td class="px-6 py-3 text-gray-400 text-xs">—</td></tr>
-                            <tr><td class="px-6 py-3 text-gray-600">2026-03-01</td><td class="px-6 py-3 font-bold text-brand-blue">50</td><td class="px-6 py-3 text-emerald-500 text-xs font-semibold">↑ Week peak</td></tr>
-                        </tbody></table>
-                    </div>
-                </div>
-                <div id="analytics-weekly" class="analytics-tab hidden">
-                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <h3 class="font-bold text-brand-blue heading mb-6">Weekly Unique Readers — Last 4 Weeks</h3>
-                        <div class="flex items-end gap-6 h-52">
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">142</span><div class="w-full bg-gradient-to-t from-brand-yellow/80 to-brand-yellow/30 rounded-t-lg" style="height:60%"></div><span class="text-xs text-gray-400">Week 1</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">198</span><div class="w-full bg-gradient-to-t from-brand-yellow/80 to-brand-yellow/30 rounded-t-lg" style="height:84%"></div><span class="text-xs text-gray-400">Week 2</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">176</span><div class="w-full bg-gradient-to-t from-brand-yellow/80 to-brand-yellow/30 rounded-t-lg" style="height:74%"></div><span class="text-xs text-gray-400">Week 3</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">236</span><div class="w-full bg-gradient-to-t from-brand-yellow to-brand-yellow/50 rounded-t-lg shadow-md" style="height:100%"></div><span class="text-xs text-gray-400">This Week</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="analytics-monthly" class="analytics-tab hidden">
-                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <h3 class="font-bold text-brand-blue heading mb-6">Monthly Unique Readers — Last 6 Months</h3>
-                        <div class="flex items-end gap-4 h-52">
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">520</span><div class="w-full bg-gradient-to-t from-indigo-400/80 to-indigo-400/20 rounded-t-lg" style="height:43%"></div><span class="text-xs text-gray-400">Oct</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">680</span><div class="w-full bg-gradient-to-t from-indigo-400/80 to-indigo-400/20 rounded-t-lg" style="height:56%"></div><span class="text-xs text-gray-400">Nov</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">790</span><div class="w-full bg-gradient-to-t from-indigo-400/80 to-indigo-400/20 rounded-t-lg" style="height:65%"></div><span class="text-xs text-gray-400">Dec</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">940</span><div class="w-full bg-gradient-to-t from-indigo-400/80 to-indigo-400/20 rounded-t-lg" style="height:77%"></div><span class="text-xs text-gray-400">Jan</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">1100</span><div class="w-full bg-gradient-to-t from-indigo-400/80 to-indigo-400/20 rounded-t-lg" style="height:90%"></div><span class="text-xs text-gray-400">Feb</span></div>
-                            <div class="flex-1 flex flex-col items-center gap-2"><span class="text-xs font-bold text-gray-500">1220</span><div class="w-full bg-gradient-to-t from-indigo-500 to-indigo-400/50 rounded-t-lg shadow-md" style="height:100%"></div><span class="text-xs text-gray-400">Mar</span></div>
-                        </div>
-                    </div>
+                            <tr>
+                                <td class="px-6 py-4 font-medium text-brand-blue flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-brand-cyan"></div> Today's Views
+                                </td>
+                                <td class="px-6 py-4 font-bold heading text-lg"><?= number_format($today_readers) ?></td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 font-medium text-brand-blue flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-brand-yellow"></div> Monthly Views
+                                </td>
+                                <td class="px-6 py-4 font-bold heading text-lg"><?= number_format($monthly_readers) ?></td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-4 font-medium text-brand-blue flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-brand-blue"></div> All-Time Views
+                                </td>
+                                <td class="px-6 py-4 font-bold heading text-xl text-brand-blue"><?= number_format($total_readers) ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -474,7 +426,7 @@ foreach($platforms as $p) {
                 </div>
                 <div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">PDF File URL *</label><input type="url" name="pdf_file_url" required placeholder="https://…" class="w-full text-sm border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40"></div>
                 <div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Publish Date</label><input type="date" name="publish_date" class="w-full text-sm border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-cyan/40"></div>
-                <div class="flex items-center gap-3 pt-2"><input type="checkbox" name="is_active" id="is-active-check" checked class="accent-brand-cyan w-4 h-4"><label for="is-active-check" class="text-sm text-gray-600 font-medium">Publish immediately</label></div>
+                <div class="flex items-center gap-3 pt-2"><input type="checkbox" name="is_active" id="is-active-check" checked class="accent-brand-cyan w-4 h-4"><label for="is-active-check" class="text-sm text-gray-600 font-medium">Publish immediately (Set to Active)</label></div>
                 <div class="flex gap-3 pt-4 border-t border-gray-100">
                     <button type="submit" class="flex-1 bg-brand-blue text-white py-2.5 rounded-full font-bold text-sm hover:bg-opacity-90 transition-all shadow-md">Create Post</button>
                     <button type="button" onclick="toggleModal('modal-new-post')" class="px-6 py-2.5 rounded-full font-bold text-sm border border-gray-200 text-gray-500">Cancel</button>
@@ -525,7 +477,7 @@ foreach($platforms as $p) {
         blog:      ['Blog Posts','Manage research insights and articles.'],
         vendors:   ['Digital Platforms','Manage portfolio systems powered by Leviathan.'],
         wordmark:  ['Wordmark Studio','Create clean text-based logos.'],
-        analytics: ['Analytics','Unique reader tracking from blog_views.'],
+        analytics: ['Analytics','Reader insights pulled from the database.'],
     };
     function switchPanel(id, el) {
         document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -537,19 +489,7 @@ foreach($platforms as $p) {
     }
     function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
 
-    // Analytics tabs
-    function setAnalyticsTab(tab) {
-        document.querySelectorAll('.analytics-tab').forEach(t=>t.classList.add('hidden'));
-        document.getElementById('analytics-'+tab).classList.remove('hidden');
-        ['daily','weekly','monthly'].forEach(t=>{
-            const b = document.getElementById('tab-'+t);
-            b.className = t===tab
-                ? 'px-4 py-2 rounded-full text-sm font-bold bg-brand-blue text-white shadow-md'
-                : 'px-4 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-gray-200';
-        });
-    }
-
-    // Wordmark Studio
+    // Wordmark Studio logic
     let currentFont = 'font-grotesk';
     const fontMap = {
         'font-grotesk':'Space Grotesk, sans-serif',
@@ -574,7 +514,6 @@ foreach($platforms as $p) {
         document.getElementById('wm-bg-hex').textContent     = bgCol;
         document.getElementById('wm-size-val').textContent   = fontSize + 'px';
 
-        // Determine base vs accent text split
         let baseText = text, accentText = accent || '';
         if (accent && text.endsWith(accent)) {
             baseText   = text.slice(0, -accent.length);
@@ -594,7 +533,6 @@ foreach($platforms as $p) {
         mainEl.style.fontSize   = fontSize + 'px';
         mainEl.style.letterSpacing = spacing + 'px';
 
-        // Rebuild inner HTML safely
         while (mainEl.firstChild) mainEl.removeChild(mainEl.firstChild);
         mainEl.appendChild(document.createTextNode(baseText));
         if (accentText) {
@@ -611,7 +549,6 @@ foreach($platforms as $p) {
             taglineEl.classList.remove('hidden');
         } else { taglineEl.classList.add('hidden'); }
 
-        // Generate SVG
         const ff  = fontMap[currentFont] || 'Space Grotesk, sans-serif';
         const y1  = tagline ? 140 : 165;
         const svgLines = [
@@ -638,14 +575,6 @@ foreach($platforms as $p) {
             if(cls===f && !b.className.includes('border-brand-cyan'))
                 b.className = b.className.replace('border border-gray-200 text-gray-500','border-2 border-brand-cyan bg-brand-cyan/5 text-brand-blue');
         });
-        updateWordmark();
-    }
-
-    function applyPalette(main,accent,bg) {
-        document.getElementById('wm-main-color').value   = main;
-        document.getElementById('wm-accent-color').value = accent;
-        document.getElementById('wm-bg-color').value     = bg;
-        document.getElementById('wordmark-preview').style.backgroundColor = bg;
         updateWordmark();
     }
 
@@ -685,11 +614,9 @@ foreach($platforms as $p) {
         img.src = url;
     }
 
-    // Wire up all wordmark inputs
     ['wm-text','wm-accent','wm-tagline','wm-main-color','wm-accent-color','wm-bg-color','wm-weight','wm-spacing','wm-size']
         .forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',updateWordmark); });
 
-    // Sync bg color picker with preview
     document.getElementById('wm-bg-color').addEventListener('input',e=>{
         document.getElementById('wordmark-preview').style.backgroundColor = e.target.value;
     });
