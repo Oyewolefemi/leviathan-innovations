@@ -14,9 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Hardcoded credentials for access (change 'admin123' to your actual preferred password)
-    if ($username === 'sefunmi' && $password === 'admin123') { 
+    // Fetch the admin from the database
+    $stmt = $pdo->prepare("SELECT * FROM admins WHERE username = ?");
+    $stmt->execute([$username]);
+    $admin = $stmt->fetch();
+
+    // Verify the password against the secure hash
+    if ($admin && password_verify($password, $admin['password_hash'])) {
         $_SESSION['is_admin'] = true;
+        $_SESSION['admin_username'] = $admin['username'];
         header("Location: index.php");
         exit;
     } else {
